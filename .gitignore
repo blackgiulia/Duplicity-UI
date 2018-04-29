@@ -1,0 +1,7 @@
+.DS_Store
+.localized
+.vscode/
+.idea/
+build/
+CMakeLists.txt.user
+catch.hpp
