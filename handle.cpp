@@ -7,52 +7,53 @@
 #include "handle.hpp"
 
 handle::handle(QObject *parent)
-    : QObject(parent),
-      statusMsg(""),
-      uid(""),
-      key(""),
-      targetDir(""),
-      sourceDir(""),
-      encryptKey(""),
-      signKey(""),
+    : QObject(parent), statusMsg(""), uid(""), key(""), dir(""), targetDir(""),
+      sourceDir(""), encryptKey(""), signKey(""),
       // TODO: add more backends
-      backend("pydrive+gdocs://developer.gserviceaccount.com/"),
-      passphrase(""),
-      signPassphrase(""),
-      p_duplicity("/") {}
+      backend("pydrive+gdocs://developer.gserviceaccount.com/"), passphrase(""),
+      signPassphrase(""), p_duplicity("/") {}
 
-void handle::updateHandle(const QString &_targetDir, const QString &_sourceDir,
-                          const QString &_encryptKey, const QString &_signKey,
-                          const QString &_passphrase,
-                          const QString &_signPassphrase) {
-  // Already have a handle.json and reloaded
-  if (!targetDir.empty()) return;
+void handle::updateHandleFromQML(const QString &targetDir_,
+                                 const QString &sourceDir_,
+                                 const QString &encryptKey_,
+                                 const QString &signKey_,
+                                 const QString &passphrase_,
+                                 const QString &signPassphrase_,
+                                 const QString &dir_) {
+  if (dir_ == QString("Select directory:")) { // Update from QML
+    targetDir = targetDir_.toStdString();
+    // Convert /path/to/dir to path/to/dir
+    if (targetDir[0] == '/') {
+      targetDir = targetDir.substr(1);
+    }
+    sourceDir = sourceDir_.toStdString().substr(7);
+    encryptKey = encryptKey_.toStdString();
+    signKey = signKey_.toStdString();
+    passphrase = passphrase_.toStdString();
+    signPassphrase = signPassphrase_.toStdString();
+  } else { // Update from handle.json
+    std::string d = dir_.toStdString();
 
-  targetDir = _targetDir.toStdString();
-  // Convert /path/to/dir to path/to/dir
-  if (targetDir[0] == '/') {
-    targetDir = targetDir.substr(1);
+    auto config_path = boost::filesystem::current_path();
+    config_path += boost::filesystem::path("/handle.json");
+
+    if (boost::filesystem::exists(config_path)) {
+      auto root = readFromJson(config_path);
+
+      for (auto &i : root.get_child("pydrive")) {
+        if (i.second.get<std::string>("sourceDir") == d) {
+          targetDir = i.second.get<std::string>("targetDir");
+          sourceDir = i.second.get<std::string>("sourceDir");
+          encryptKey = i.second.get<std::string>("encryptKey");
+          signKey = i.second.get<std::string>("signKey");
+          passphrase = i.second.get<std::string>("passphrase");
+          signPassphrase = i.second.get<std::string>("signPassphrase");
+          break;
+        }
+      }
+    }
   }
-  sourceDir = _sourceDir.toStdString().substr(7);
-  encryptKey = _encryptKey.toStdString();
-  signKey = _signKey.toStdString();
-  passphrase = _passphrase.toStdString();
-  signPassphrase = _signPassphrase.toStdString();
-  return;
-}
 
-void handle::updateHandle(const std::string &_targetDir,
-                          const std::string &_sourceDir,
-                          const std::string &_encryptKey,
-                          const std::string &_signKey,
-                          const std::string &_passphrase,
-                          const std::string &_signPassphrase) {
-  targetDir = _targetDir;
-  sourceDir = _sourceDir;
-  encryptKey = _encryptKey;
-  signKey = _signKey;
-  passphrase = _passphrase;
-  signPassphrase = _signPassphrase;
   return;
 }
 
@@ -71,6 +72,7 @@ void handle::performBackup(const bool &isFull) const {
   // Max 1,677,216 TB
   uint64_t backupSize = 0;
 
+  // Do backup
   boost::process::child c1(
       p_duplicity, argv, "--encrypt-key", encryptKey, "--sign-key", signKey,
       "--gpg-options", "--cipher-algo=AES256", "--allow-source-mismatch",
@@ -115,6 +117,7 @@ void handle::performBackup(const bool &isFull) const {
       boost::process::env["SIGN_PASSPHRASE"] = signPassphrase);
   c2.wait();
 
+  // Remove previous backup
   if (argv == "full") {
     boost::process::child c3(p_duplicity, "remove-all-but-n-full", "1",
                              "--force", backend + targetDir,
@@ -130,51 +133,120 @@ void handle::performBackup(const bool &isFull) const {
   auto config_path = boost::filesystem::current_path();
   config_path += boost::filesystem::path("/handle.json");
 
-  if (isFull) {
-    auto root = writeToPT();
-    root.put("lastFullDate", s_time);
-    root.put("lastFullSize", backupSize);
-    root.put("lastIncrDate", "none");
-    root.put("totalIncrSize", 0);
+  if (boost::filesystem::exists(config_path)) {
+    if (!isFull) { // Update incremental backup status to handle.json
+      auto root = readFromJson(config_path);
+      for (auto &i : root.get_child("pydrive")) {
+        if (i.second.get<std::string>("targetDir") == targetDir) {
+          i.second.put("lastIncrDate", s_time);
+          auto last_incr_size = i.second.get<uint64_t>("totalIncrSize");
+          i.second.put("totalIncrSize", backupSize + last_incr_size);
+          break;
+        }
+      }
+      writeToJson(root, config_path);
+      return;
+    } else { // Update full backup status to handle.json
+      auto root = readFromJson(config_path);
+      for (auto &i : root.get_child("pydrive")) {
+        if (i.second.get<std::string>("targetDir") == targetDir) {
+          i.second.put("lastFullDate", s_time);
+          i.second.put("lastFullSize", backupSize);
+          i.second.put("lastIncrDate", "none");
+          i.second.put("totalIncrSize", 0);
+          writeToJson(root, config_path);
+          return;
+        }
+      }
+      auto r = writeToPT();
+      r.put("lastFullDate", s_time);
+      r.put("lastFullSize", backupSize);
+      r.put("lastIncrDate", "none");
+      r.put("totalIncrSize", 0);
+      root.get_child("pydrive").push_back(make_pair("", r));
+      writeToJson(root, config_path);
+      return;
+    }
+  } else { // Create new handle.json
+    auto r = writeToPT();
+    r.put("lastFullDate", s_time);
+    r.put("lastFullSize", backupSize);
+    r.put("lastIncrDate", "none");
+    r.put("totalIncrSize", 0);
+    boost::property_tree::ptree root;
+    root.put("pydrive", "");
+    root.get_child("pydrive").push_back(make_pair("", r));
     writeToJson(root, config_path);
-  } else {
-    auto root = readFromJson(config_path);
-    root.put("lastIncrDate", s_time);
-    auto last_incr_size = root.get<uint64_t>("totalIncrSize");
-    root.put("totalIncrSize", backupSize + last_incr_size);
-    writeToJson(root, config_path);
+    return;
   }
 
   return;
 }
 
+void handle::showLastStatus(const QString sourceDir_) const {
+  std::string d = sourceDir_.toStdString();
+
+  auto config_path = boost::filesystem::current_path();
+  config_path += boost::filesystem::path("/handle.json");
+
+  if (boost::filesystem::exists(config_path)) {
+    auto root = readFromJson(config_path);
+
+    for (auto &i : root.get_child("pydrive")) {
+      if (i.second.get<std::string>("sourceDir") == d) {
+        updateStatusText(
+            QString("    last full backup date is ") +
+            QString::fromStdString(i.second.get<std::string>("lastFullDate")));
+
+        updateStatusText(
+            QString("    last full backup size is ") +
+            QString::fromStdString(i.second.get<std::string>("lastFullSize")) +
+            QString(" bytes"));
+
+        updateStatusText(
+            QString("    last incremental backup date is ") +
+            QString::fromStdString(i.second.get<std::string>("lastIncrDate")));
+
+        updateStatusText(
+            QString("    total incremental backup size is ") +
+            QString::fromStdString(i.second.get<std::string>("totalIncrSize")) +
+            QString(" bytes"));
+
+        updateStatusText(sourceDir_ + " last status:");
+        break;
+      }
+    }
+  }
+  return;
+}
+
 void handle::getDup() {
-  auto _p_duplicity = boost::process::search_path("duplicity");
-  p_duplicity = _p_duplicity;
+  p_duplicity = boost::process::search_path("duplicity");
   return;
 }
 
 boost::property_tree::ptree handle::writeToPT() const {
-  boost::property_tree::ptree _root;
+  boost::property_tree::ptree root;
 
-  _root.put("targetDir", targetDir);
-  _root.put("sourceDir", sourceDir);
-  _root.put("encryptKey", encryptKey);
-  _root.put("signKey", signKey);
-  _root.put("backend", backend);
-  _root.put("passphrase", passphrase);
-  _root.put("signPassphrase", signPassphrase);
-  _root.put("duplicity_path", p_duplicity.string());
+  root.put("targetDir", targetDir);
+  root.put("sourceDir", sourceDir);
+  root.put("encryptKey", encryptKey);
+  root.put("signKey", signKey);
+  root.put("backend", backend);
+  root.put("passphrase", passphrase);
+  root.put("signPassphrase", signPassphrase);
 
-  return _root;
+  return root;
 }
 
 void handle::doStatusChange() { emit updateStatusText(statusMsg); }
 
 void handle::doKeysChange() { emit updateKeys(uid, key); }
 
-boost::property_tree::ptree readFromJson(
-    const boost::filesystem::path &config_path) {
+void handle::doDirChange() { emit updateDir(dir); }
+
+boost::property_tree::ptree
+readFromJson(const boost::filesystem::path &config_path) {
   boost::property_tree::ptree root;
   boost::filesystem::ifstream file;
   file.open(config_path, boost::filesystem::ifstream::in);
@@ -228,7 +300,7 @@ std::vector<std::pair<std::string, std::string>> get_keys() {
       uid = "uid";
       for_each(tokens.begin() + 1, tokens.end(),
                [&](auto &i) { uid += (" " + i); });
-      keys.push_back(std::make_pair(uid, key));
+      keys.emplace_back(uid, key);
     }
   }
 

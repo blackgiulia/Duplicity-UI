@@ -26,6 +26,12 @@ Window {
                                value: key
                            })
         }
+        onUpdateDir: {
+            selectDir.append({
+                                 text: dir,
+                                 value: dir
+                             })
+        }
     }
 
     Rectangle {
@@ -39,6 +45,23 @@ Window {
         Column {
             anchors.centerIn: parent
             spacing: 20
+
+            ComboBox {
+                id: box0
+                currentIndex: 0
+                width: leftMain.width * 0.7
+                model: ListModel {
+                    id: selectDir
+                    ListElement {
+                        text: "Select directory:"
+                        value: ""
+                    }
+                }
+                onCurrentIndexChanged: {
+                    handler.showLastStatus(selectDir.get(
+                                               box0.currentIndex).value)
+                }
+            }
 
             ComboBox {
                 id: box1
@@ -62,6 +85,7 @@ Window {
 
             ComboBox {
                 id: box2
+                currentIndex: 0
                 width: leftMain.width * 0.7
                 model: ListModel {
                     id: signKey
@@ -151,7 +175,7 @@ Window {
                 id: fullButton
                 text: "Full"
                 onClicked: {
-                    handler.updateHandle(
+                    handler.updateHandleFromQML(
                                 targetDir.getText(0,
                                                   targetDir.length), sourceDir.getText(
                                     0, sourceDir.length),
@@ -159,7 +183,8 @@ Window {
                                 signKey.get(box2.currentIndex).value,
                                 encryptKeyPass.getText(0,
                                                        encryptKeyPass.length), signKeyPass.getText(
-                                    0, signKeyPass.length))
+                                    0, signKeyPass.length),
+                                selectDir.get(box0.currentIndex).text)
                     handler.performBackup(1)
                 }
             }
@@ -168,6 +193,16 @@ Window {
                 id: incrButton
                 text: "Incr"
                 onClicked: {
+                    handler.updateHandleFromQML(
+                                targetDir.getText(0,
+                                                  targetDir.length), sourceDir.getText(
+                                    0, sourceDir.length),
+                                encryptKey.get(box1.currentIndex).value,
+                                signKey.get(box2.currentIndex).value,
+                                encryptKeyPass.getText(0,
+                                                       encryptKeyPass.length), signKeyPass.getText(
+                                    0, signKeyPass.length),
+                                selectDir.get(box0.currentIndex).text)
                     handler.performBackup(0)
                 }
             }

@@ -26,59 +26,58 @@
 
 class handle : public QObject {
   Q_OBJECT
- public:
+public:
   explicit handle(QObject *parent = nullptr);
 
   // Update from UI
-  Q_INVOKABLE void updateHandle(const QString &_targetDir,
-                                const QString &_sourceDir,
-                                const QString &_encryptKey,
-                                const QString &_signKey,
-                                const QString &_passphrase,
-                                const QString &_signPassphrase);
-
-  // Update from handle.json
-  void updateHandle(const std::string &_targetDir,
-                    const std::string &_sourceDir,
-                    const std::string &_encryptKey, const std::string &_signKey,
-                    const std::string &_passphrase,
-                    const std::string &_signPassphrase);
+  Q_INVOKABLE void
+  updateHandleFromQML(const QString &targetDir_, const QString &sourceDir_,
+                      const QString &encryptKey_, const QString &signKey_,
+                      const QString &passphrase_,
+                      const QString &signPassphrase_, const QString &dir_);
 
   // Do backup
   Q_INVOKABLE void performBackup(const bool &isFull) const;
+
+  // Show status from handle.json
+  Q_INVOKABLE void showLastStatus(QString sourceDir_) const;
 
   // Set Duplicity path
   void getDup();
 
   boost::property_tree::ptree writeToPT() const;
 
-  //  Q_INVOKABLE void test() const {
+  //  void test() {
   //    std::cout << targetDir << '\n'
   //              << sourceDir << '\n'
   //              << encryptKey << '\n'
   //              << signKey << '\n'
-  //              << backend << '\n'
   //              << passphrase << '\n'
-  //              << signPassphrase << '\n'
-  //              << p_duplicity << std::endl;
+  //              << signPassphrase << std::endl;
   //  }
 
- signals:
+signals:
   // Update to UI status text
-  void updateStatusText(QString newStatus) const;
+  void updateStatusText(const QString newStatus) const;
 
   // Update system GPG keys to UI, only display key uid information
-  void updateKeys(QString uid, QString key) const;
+  void updateKeys(const QString uid, const QString key) const;
 
- public slots:  // Let qml listen
+  // Update directories in handle.json to UI
+  void updateDir(const QString dir) const;
+
+public slots: // Let qml listen
   void doStatusChange();
 
   void doKeysChange();
 
- private:
-  QString statusMsg;  // For status text update
+  void doDirChange();
+
+private:
+  QString statusMsg; // For status text update
   QString uid;
   QString key;
+  QString dir;
   std::string targetDir;
   std::string sourceDir;
   std::string encryptKey;
@@ -90,8 +89,8 @@ class handle : public QObject {
 };
 
 // Read from handle.json
-boost::property_tree::ptree readFromJson(
-    const boost::filesystem::path &config_path);
+boost::property_tree::ptree
+readFromJson(const boost::filesystem::path &config_path);
 
 // Write to handle.json
 void writeToJson(const boost::property_tree::ptree &root,
@@ -103,4 +102,4 @@ std::vector<std::pair<std::string, std::string>> get_keys();
 // Get local time for status text update
 QString getTime();
 
-#endif  // HANDLE_HPP
+#endif // HANDLE_HPP

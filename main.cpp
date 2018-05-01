@@ -27,7 +27,8 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty("handler", &pydriveHandle);
 
   engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-  if (engine.rootObjects().isEmpty()) return -1;
+  if (engine.rootObjects().isEmpty())
+    return -1;
 
   pydriveHandle.updateStatusText(getTime() + " - " + QString("Hello, Dear!"));
 
@@ -37,7 +38,6 @@ int main(int argc, char *argv[]) {
                              QString::fromStdString(i.second));
   }
 
-  boost::property_tree::ptree root;
   auto config_path = boost::filesystem::current_path();
   config_path += boost::filesystem::path("/handle.json");
 
@@ -47,34 +47,14 @@ int main(int argc, char *argv[]) {
 
     auto root = readFromJson(config_path);
 
-    pydriveHandle.updateHandle(
-        root.get<std::string>("targetDir"), root.get<std::string>("sourceDir"),
-        root.get<std::string>("encryptKey"), root.get<std::string>("signKey"),
-        root.get<std::string>("passphrase"),
-        root.get<std::string>("signPassphrase"));
-    pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("reloading handle.json successfully"));
+    for (auto &i : root.get_child("pydrive")) {
+      pydriveHandle.updateDir(
+          QString::fromStdString(i.second.get<std::string>("sourceDir")));
+    }
 
     pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("last full backup date is ") +
-        QString::fromStdString(root.get<std::string>("lastFullDate")));
-
-    pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("last full backup size is ") +
-        QString::fromStdString(root.get<std::string>("lastFullSize")) +
-        QString(" bytes"));
-
-    pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("last incremental backup date is ") +
-        QString::fromStdString(root.get<std::string>("lastIncrDate")));
-
-    pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("total incremental backup size is ") +
-        QString::fromStdString(root.get<std::string>("totalIncrSize")) +
-        QString(" bytes"));
-
-    pydriveHandle.updateStatusText(
-        getTime() + " - " + QString("an incremental backup can be performed"));
+        getTime() + " - " +
+        QString("an incremental backup can be performed on Select Directory"));
   }
 
   return app.exec();
