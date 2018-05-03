@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -23,6 +24,7 @@
 #include <boost/process.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <cryptopp/base64.h>
 
 class handle : public QObject {
   Q_OBJECT
@@ -101,5 +103,11 @@ std::vector<std::pair<std::string, std::string>> get_keys();
 
 // Get local time for status text update
 QString getTime();
+
+// Encode string to base64 string
+std::string encode64(const std::string &pass);
+
+// Decode base64 string to string
+std::string decode64(const std::string &pass);
 
 #endif // HANDLE_HPP

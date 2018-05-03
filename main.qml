@@ -148,14 +148,17 @@ Window {
         height: mainFrame.height * 0.7
         color: "#f0f0f2"
 
-        Text {
-            id: statusText
-            property string s: ""
+        ScrollView {
+            id: statusView
             anchors.fill: parent
             anchors.margins: 10
-            text: qsTr(s)
-            wrapMode: Text.Wrap
-            //            font.family: "Mono"
+            Label {
+                id: statusText
+                width: statusView.width - 20
+                property string s: ""
+                text: qsTr(s)
+                wrapMode: Text.Wrap
+            }
         }
     }
 

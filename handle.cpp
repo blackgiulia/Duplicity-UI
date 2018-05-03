@@ -46,8 +46,9 @@ void handle::updateHandleFromQML(const QString &targetDir_,
           sourceDir = i.second.get<std::string>("sourceDir");
           encryptKey = i.second.get<std::string>("encryptKey");
           signKey = i.second.get<std::string>("signKey");
-          passphrase = i.second.get<std::string>("passphrase");
-          signPassphrase = i.second.get<std::string>("signPassphrase");
+          passphrase = decode64(i.second.get<std::string>("passphrase"));
+          signPassphrase =
+              decode64(i.second.get<std::string>("signPassphrase"));
           break;
         }
       }
@@ -163,6 +164,8 @@ void handle::performBackup(const bool &isFull) const {
       r.put("lastFullSize", backupSize);
       r.put("lastIncrDate", "none");
       r.put("totalIncrSize", 0);
+      r.put("passphrase", encode64(r.get<std::string>("passphrase")));
+      r.put("signPassphrase", encode64(r.get<std::string>("signPassphrase")));
       root.get_child("pydrive").push_back(make_pair("", r));
       writeToJson(root, config_path);
       return;
@@ -173,6 +176,8 @@ void handle::performBackup(const bool &isFull) const {
     r.put("lastFullSize", backupSize);
     r.put("lastIncrDate", "none");
     r.put("totalIncrSize", 0);
+    r.put("passphrase", encode64(r.get<std::string>("passphrase")));
+    r.put("signPassphrase", encode64(r.get<std::string>("signPassphrase")));
     boost::property_tree::ptree root;
     root.put("pydrive", "");
     root.get_child("pydrive").push_back(make_pair("", r));
@@ -311,4 +316,32 @@ QString getTime() {
   boost::posix_time::ptime t(boost::posix_time::second_clock::local_time());
   auto s = boost::posix_time::to_iso_extended_string(t).substr(11, 8);
   return QString::fromStdString(s);
+}
+
+std::string encode64(const std::string &pass) {
+  std::string res;
+  CryptoPP::Base64Encoder encoder;
+  CryptoPP::byte *decoded = (CryptoPP::byte *)pass.c_str();
+  encoder.Put(decoded, pass.size());
+  encoder.MessageEnd();
+  CryptoPP::word64 size = encoder.MaxRetrievable();
+  if (size) {
+    res.resize(size);
+    encoder.Get((CryptoPP::byte *)&res[0], res.size());
+  }
+  return res;
+}
+
+std::string decode64(const std::string &encoded) {
+  std::string decoded;
+  CryptoPP::Base64Decoder decoder;
+  decoder.Put((CryptoPP::byte *)encoded.data(), encoded.size());
+  decoder.MessageEnd();
+
+  CryptoPP::word64 size = decoder.MaxRetrievable();
+  if (size && size <= SIZE_MAX) {
+    decoded.resize(size);
+    decoder.Get((CryptoPP::byte *)&decoded[0], decoded.size());
+  }
+  return decoded;
 }
