@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 
   pydriveHandle.updateStatusText(getTime() + " - " + QString("Hello, Dear!"));
 
-  auto keys = get_keys();
+  auto keys = pydriveHandle.get_keys();
   for (auto &i : keys) {
     pydriveHandle.updateKeys(QString::fromStdString(i.first),
                              QString::fromStdString(i.second));
@@ -54,7 +54,8 @@ int main(int argc, char *argv[]) {
 
     pydriveHandle.updateStatusText(
         getTime() + " - " +
-        QString("an incremental backup can be performed on Select Directory"));
+        QString("use Select Directory box to perform a backup or restore "
+                "operation"));
   }
 
   return app.exec();

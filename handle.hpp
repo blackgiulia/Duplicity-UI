@@ -38,14 +38,20 @@ public:
                       const QString &passphrase_,
                       const QString &signPassphrase_, const QString &dir_);
 
+  // Do restore
+  Q_INVOKABLE void performRestore() const;
+
   // Do backup
   Q_INVOKABLE void performBackup(const bool &isFull) const;
 
   // Show status from handle.json
-  Q_INVOKABLE void showLastStatus(QString sourceDir_) const;
+  Q_INVOKABLE void showLastStatus(const QString sourceDir_) const;
 
   // Set Duplicity path
   void getDup();
+
+  // Read system GPG keys
+  std::vector<std::pair<std::string, std::string>> get_keys() const;
 
   boost::property_tree::ptree writeToPT() const;
 
@@ -98,16 +104,13 @@ readFromJson(const boost::filesystem::path &config_path);
 void writeToJson(const boost::property_tree::ptree &root,
                  const boost::filesystem::path &config_path);
 
-// Read system GPG keys
-std::vector<std::pair<std::string, std::string>> get_keys();
-
 // Get local time for status text update
-QString getTime();
+QString getTime() noexcept;
 
 // Encode string to base64 string
-std::string encode64(const std::string &pass);
+std::string encode64(const std::string &pass) noexcept;
 
 // Decode base64 string to string
-std::string decode64(const std::string &pass);
+std::string decode64(const std::string &pass) noexcept;
 
 #endif // HANDLE_HPP

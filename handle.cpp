@@ -58,10 +58,31 @@ void handle::updateHandleFromQML(const QString &targetDir_,
   return;
 }
 
+void handle::performRestore() const {
+  // Do restore
+  try {
+    boost::process::child c(
+        p_duplicity, "restore", "--encrypt-key", encryptKey, "--sign-key",
+        signKey, backend + targetDir, sourceDir,
+        boost::process::std_out > boost::process::null,
+        boost::process::env["PASSPHRASE"] = passphrase,
+        boost::process::env["SIGN_PASSPHRASE"] = signPassphrase);
+    c.wait();
+  } catch (std::system_error &err) {
+    updateStatusText(getTime() + " - restore failed. Make sure duplicity, "
+                                 "PyDrive and GPG are installed");
+  }
+
+  updateStatusText(getTime() + " - " + QString::fromStdString(targetDir) +
+                   " has been restored to " +
+                   QString::fromStdString(sourceDir));
+
+  return;
+}
+
 // TODO: Asynchronous backup process for different folders feature
 void handle::performBackup(const bool &isFull) const {
   std::string argv;
-
   if (isFull) {
     argv = "full";
   } else {
@@ -74,16 +95,21 @@ void handle::performBackup(const bool &isFull) const {
   uint64_t backupSize = 0;
 
   // Do backup
-  boost::process::child c1(
-      p_duplicity, argv, "--encrypt-key", encryptKey, "--sign-key", signKey,
-      "--gpg-options", "--cipher-algo=AES256", "--allow-source-mismatch",
-      sourceDir, backend + targetDir, boost::process::std_out > is,
-      boost::process::env["PASSPHRASE"] = passphrase,
-      boost::process::env["SIGN_PASSPHRASE"] = signPassphrase);
-  c1.wait();
+  try {
+    boost::process::child c1(
+        p_duplicity, argv, "--encrypt-key", encryptKey, "--sign-key", signKey,
+        "--gpg-options", "--cipher-algo=AES256", "--allow-source-mismatch",
+        sourceDir, backend + targetDir, boost::process::std_out > is,
+        boost::process::env["PASSPHRASE"] = passphrase,
+        boost::process::env["SIGN_PASSPHRASE"] = signPassphrase);
+    c1.wait();
+  } catch (std::system_error &err) {
+    updateStatusText(
+        getTime() +
+        " - backup failed. Make sure duplicity, PyDrive and GPG are installed");
+  }
 
   std::string line;
-
   while (is && std::getline(is, line)) {
     if (line.empty()) {
       continue;
@@ -150,6 +176,7 @@ void handle::performBackup(const bool &isFull) const {
     } else { // Update full backup status to handle.json
       auto root = readFromJson(config_path);
       for (auto &i : root.get_child("pydrive")) {
+        // Modify corresponding status
         if (i.second.get<std::string>("targetDir") == targetDir) {
           i.second.put("lastFullDate", s_time);
           i.second.put("lastFullSize", backupSize);
@@ -159,6 +186,7 @@ void handle::performBackup(const bool &isFull) const {
           return;
         }
       }
+      // Add a new status
       auto r = writeToPT();
       r.put("lastFullDate", s_time);
       r.put("lastFullSize", backupSize);
@@ -222,12 +250,56 @@ void handle::showLastStatus(const QString sourceDir_) const {
       }
     }
   }
+
   return;
 }
 
 void handle::getDup() {
   p_duplicity = boost::process::search_path("duplicity");
   return;
+}
+
+std::vector<std::pair<std::string, std::string>> handle::get_keys() const {
+  std::vector<std::pair<std::string, std::string>> keys;
+
+  auto p_gpg = boost::process::search_path("gpg");
+
+  boost::process::ipstream is;
+  try {
+    boost::process::child c1(p_gpg, "--list-keys",
+                             boost::process::std_out > is);
+    c1.wait();
+  } catch (std::system_error &err) {
+    updateStatusText(getTime() + " - GPG keys are not detected");
+  }
+
+  std::string line, uid, key;
+
+  while (is && std::getline(is, line)) {
+    if (line.empty()) {
+      continue;
+    }
+    std::vector<std::string> tokens;
+    std::stringstream ss(line);
+    std::string s;
+    while (getline(ss, s, ' ')) {
+      if (!s.empty()) {
+        tokens.push_back(s);
+      }
+    }
+    // Get GPG keys, show only uid to UI
+    if (tokens.size() == 1) {
+      key = tokens[0];
+    }
+    if (tokens[0] == "uid") {
+      uid = "uid";
+      for_each(tokens.begin() + 1, tokens.end(),
+               [&](auto &i) { uid += (" " + i); });
+      keys.emplace_back(uid, key);
+    }
+  }
+
+  return keys;
 }
 
 boost::property_tree::ptree handle::writeToPT() const {
@@ -274,51 +346,13 @@ void writeToJson(const boost::property_tree::ptree &root,
   return;
 }
 
-std::vector<std::pair<std::string, std::string>> get_keys() {
-  std::vector<std::pair<std::string, std::string>> keys;
-
-  auto p_gpg = boost::process::search_path("gpg");
-
-  boost::process::ipstream is;
-  boost::process::child c1(p_gpg, "--list-keys", boost::process::std_out > is);
-  c1.wait();
-
-  std::string line, uid, key;
-
-  while (is && std::getline(is, line)) {
-    if (line.empty()) {
-      continue;
-    }
-    std::vector<std::string> tokens;
-    std::stringstream ss(line);
-    std::string s;
-    while (getline(ss, s, ' ')) {
-      if (!s.empty()) {
-        tokens.push_back(s);
-      }
-    }
-
-    if (tokens.size() == 1) {
-      key = tokens[0];
-    }
-    if (tokens[0] == "uid") {
-      uid = "uid";
-      for_each(tokens.begin() + 1, tokens.end(),
-               [&](auto &i) { uid += (" " + i); });
-      keys.emplace_back(uid, key);
-    }
-  }
-
-  return keys;
-}
-
-QString getTime() {
+QString getTime() noexcept {
   boost::posix_time::ptime t(boost::posix_time::second_clock::local_time());
   auto s = boost::posix_time::to_iso_extended_string(t).substr(11, 8);
   return QString::fromStdString(s);
 }
 
-std::string encode64(const std::string &pass) {
+std::string encode64(const std::string &pass) noexcept {
   std::string res;
   CryptoPP::Base64Encoder encoder;
   CryptoPP::byte *decoded = (CryptoPP::byte *)pass.c_str();
@@ -332,7 +366,7 @@ std::string encode64(const std::string &pass) {
   return res;
 }
 
-std::string decode64(const std::string &encoded) {
+std::string decode64(const std::string &encoded) noexcept {
   std::string decoded;
   CryptoPP::Base64Decoder decoder;
   decoder.Put((CryptoPP::byte *)encoded.data(), encoded.size());

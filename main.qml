@@ -145,7 +145,7 @@ Window {
         anchors.left: leftMain.right
         anchors.top: mainFrame.top
         width: mainFrame.width - leftMain.width
-        height: mainFrame.height * 0.7
+        height: mainFrame.height * 0.8
         color: "#f0f0f2"
 
         ScrollView {
@@ -207,6 +207,24 @@ Window {
                                     0, signKeyPass.length),
                                 selectDir.get(box0.currentIndex).text)
                     handler.performBackup(0)
+                }
+            }
+
+            Button {
+                id: restButton
+                text: "Restore"
+                onClicked: {
+                    handler.updateHandleFromQML(
+                                targetDir.getText(0,
+                                                  targetDir.length), sourceDir.getText(
+                                    0, sourceDir.length),
+                                encryptKey.get(box1.currentIndex).value,
+                                signKey.get(box2.currentIndex).value,
+                                encryptKeyPass.getText(0,
+                                                       encryptKeyPass.length), signKeyPass.getText(
+                                    0, signKeyPass.length),
+                                selectDir.get(box0.currentIndex).text)
+                    handler.performRestore()
                 }
             }
         }
