@@ -7,6 +7,7 @@
 #ifndef HANDLE_HPP
 #define HANDLE_HPP
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 
@@ -24,7 +25,6 @@
 #include <boost/process.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <cryptopp/base64.h>
 
 class handle : public QObject {
   Q_OBJECT
@@ -111,6 +111,6 @@ QString getTime() noexcept;
 std::string encode64(const std::string &pass) noexcept;
 
 // Decode base64 string to string
-std::string decode64(const std::string &pass) noexcept;
+std::string decode64(const std::string &encoded) noexcept;
 
 #endif // HANDLE_HPP

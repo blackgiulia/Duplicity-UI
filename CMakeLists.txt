@@ -8,14 +8,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 set(CMAKE_PREFIX_PATH "/Users/hn/Qt5.10.1//5.10.1/clang_64")
-set(CRYPTOPP_INCLUDE_DIR "/usr/local/opt/cryptopp/include")
 
 find_package(Qt5 COMPONENTS Core Quick REQUIRED)
 
 find_package(Boost COMPONENTS filesystem date_time system REQUIRED)
 
-find_package(CryptoPP REQUIRED)
-
 add_executable(${PROJECT_NAME} "main.cpp" "qml.qrc" "handle.cpp" "handle.hpp")
 
-target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Quick ${Boost_LIBRARIES} ${CRYPTOPP_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Quick ${Boost_LIBRARIES})

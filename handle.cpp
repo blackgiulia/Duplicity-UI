@@ -273,7 +273,7 @@ std::vector<std::pair<std::string, std::string>> handle::get_keys() const {
     updateStatusText(getTime() + " - GPG keys are not detected");
   }
 
-  std::string line, uid, key;
+  std::string line, uid_, key_;
 
   while (is && std::getline(is, line)) {
     if (line.empty()) {
@@ -289,13 +289,13 @@ std::vector<std::pair<std::string, std::string>> handle::get_keys() const {
     }
     // Get GPG keys, show only uid to UI
     if (tokens.size() == 1) {
-      key = tokens[0];
+      key_ = tokens[0];
     }
     if (tokens[0] == "uid") {
-      uid = "uid";
+      uid_ = "uid";
       for_each(tokens.begin() + 1, tokens.end(),
-               [&](auto &i) { uid += (" " + i); });
-      keys.emplace_back(uid, key);
+               [&](auto &i) { uid_ += (" " + i); });
+      keys.emplace_back(uid_, key_);
     }
   }
 
@@ -354,28 +354,15 @@ QString getTime() noexcept {
 
 std::string encode64(const std::string &pass) noexcept {
   std::string res;
-  CryptoPP::Base64Encoder encoder;
-  CryptoPP::byte *decoded = (CryptoPP::byte *)pass.c_str();
-  encoder.Put(decoded, pass.size());
-  encoder.MessageEnd();
-  CryptoPP::word64 size = encoder.MaxRetrievable();
-  if (size) {
-    res.resize(size);
-    encoder.Get((CryptoPP::byte *)&res[0], res.size());
-  }
+  QByteArray ba(pass.c_str(), pass.size());
+  res = ba.toBase64(QByteArray::Base64UrlEncoding).toStdString();
   return res;
 }
 
 std::string decode64(const std::string &encoded) noexcept {
   std::string decoded;
-  CryptoPP::Base64Decoder decoder;
-  decoder.Put((CryptoPP::byte *)encoded.data(), encoded.size());
-  decoder.MessageEnd();
-
-  CryptoPP::word64 size = decoder.MaxRetrievable();
-  if (size && size <= SIZE_MAX) {
-    decoded.resize(size);
-    decoder.Get((CryptoPP::byte *)&decoded[0], decoded.size());
-  }
+  QByteArray ba(encoded.c_str(), encoded.size());
+  decoded =
+      QByteArray::fromBase64(ba, QByteArray::Base64UrlEncoding).toStdString();
   return decoded;
 }

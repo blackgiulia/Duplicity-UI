@@ -7,9 +7,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQmlEngine>
-#include <QString>
-#include <QtDebug>
 
 #include "handle.hpp"
 
