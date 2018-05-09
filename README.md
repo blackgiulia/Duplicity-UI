@@ -8,15 +8,17 @@ The program will store input information to a **handle.json** file in the curren
 
 Whenever a full backup is performed, all backup files before this full backup will be deleted. Multiple folders are supported and you can use **Select directory** box to show the corresponding last backup status and do incremental backup or backup restore operations.
 
-This program is only tested on macOS 10.13.4 with [GPG](https://www.gnupg.org/) 2.2.6, [duplicity](http://duplicity.nongnu.org/) 0.7.17 and [PyDrive](https://github.com/gsuitedevs/PyDrive) 1.2.1 and depends on Crypto++, Boost and Qt libraries only. It should work on WINDOWS as well but not tested.
+This program is only tested on macOS 10.13.4 with [GPG](https://www.gnupg.org/) 2.2.6, [duplicity](http://duplicity.nongnu.org/) 0.7.17 and [PyDrive](https://github.com/gsuitedevs/PyDrive) 1.2.1 and depends on Boost and Qt libraries only. It should work on WINDOWS as well but not tested.
 
 ## Dependencies
 
 * [Boost](https://www.boost.org/) 1.67
 * [Qt](https://www.qt.io/) 5.10.1
-* [Crypto++](https://www.cryptopp.com/) 7.0.0
 
-## TODO: Asynchronous backup process for different folders
+## TODO: 
+
+* Asynchronous backup process for different folders
+* Add PATH environment variable for running as bundle on macOS
 
 ## Screenshots
 
