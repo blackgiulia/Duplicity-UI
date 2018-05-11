@@ -3,7 +3,7 @@ import QtQuick.Window 2.10
 import QtQuick.Controls 1.4
 import QtQuick.Dialogs 1.3
 
-Window {
+ApplicationWindow {
 
     id: mainFrame
     visible: true
@@ -12,28 +12,29 @@ Window {
     color: "#2d2d2d"
     title: qsTr("Duplicity UI")
 
+    function appendKey(uid, key) {
+        encryptKey.append({
+                              text: uid,
+                              value: key
+                          })
+        signKey.append({
+                           text: uid,
+                           value: key
+                       })
+    }
+
+    function appendDir(dir) {
+        selectDir.append({
+                             text: dir,
+                             value: dir
+                         })
+    }
+
     Connections {
         target: handler
         // Add new status text on top
         onUpdateStatusText: statusText.s = newStatus + '\n' + statusText.s
-        onUpdateKeys: {
-            encryptKey.append({
-                                  text: uid,
-                                  value: key
-                              })
-            signKey.append({
-                               text: uid,
-                               value: key
-                           })
-        }
-        onUpdateDir: {
-            selectDir.append({
-                                 text: dir,
-                                 value: dir
-                             })
-        }
     }
-
     Rectangle {
         id: leftMain
         anchors.left: mainFrame.left

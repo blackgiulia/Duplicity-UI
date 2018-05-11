@@ -55,37 +55,14 @@ public:
 
   boost::property_tree::ptree writeToPT() const;
 
-  //  void test() {
-  //    std::cout << targetDir << '\n'
-  //              << sourceDir << '\n'
-  //              << encryptKey << '\n'
-  //              << signKey << '\n'
-  //              << passphrase << '\n'
-  //              << signPassphrase << std::endl;
-  //  }
-
 signals:
   // Update to UI status text
   void updateStatusText(const QString newStatus) const;
 
-  // Update system GPG keys to UI, only display key uid information
-  void updateKeys(const QString uid, const QString key) const;
-
-  // Update directories in handle.json to UI
-  void updateDir(const QString dir) const;
-
-public slots: // Let qml listen
-  void doStatusChange();
-
-  void doKeysChange();
-
-  void doDirChange();
+public slots:
 
 private:
   QString statusMsg; // For status text update
-  QString uid;
-  QString key;
-  QString dir;
   std::string targetDir;
   std::string sourceDir;
   std::string encryptKey;

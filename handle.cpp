@@ -7,8 +7,8 @@
 #include "handle.hpp"
 
 handle::handle(QObject *parent)
-    : QObject(parent), statusMsg(""), uid(""), key(""), dir(""), targetDir(""),
-      sourceDir(""), encryptKey(""), signKey(""),
+    : QObject(parent), statusMsg(""), targetDir(""), sourceDir(""),
+      encryptKey(""), signKey(""),
       // TODO: add more backends
       backend("pydrive+gdocs://developer.gserviceaccount.com/"), passphrase(""),
       signPassphrase(""), p_duplicity("/") {}
@@ -315,12 +315,6 @@ boost::property_tree::ptree handle::writeToPT() const {
 
   return root;
 }
-
-void handle::doStatusChange() { emit updateStatusText(statusMsg); }
-
-void handle::doKeysChange() { emit updateKeys(uid, key); }
-
-void handle::doDirChange() { emit updateDir(dir); }
 
 boost::property_tree::ptree
 readFromJson(const boost::filesystem::path &config_path) {

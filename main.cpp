@@ -10,6 +10,24 @@
 
 #include "handle.hpp"
 
+// Update keys to UI
+void addKeys(QObject *const rootObject, const handle &pydriveHandle) {
+  auto keys = pydriveHandle.get_keys();
+  for (auto &i : keys) {
+    QMetaObject::invokeMethod(
+        rootObject, "appendKey",
+        Q_ARG(QVariant, QString::fromStdString(i.first)),
+        Q_ARG(QVariant, QString::fromStdString(i.second)));
+  }
+  return;
+}
+
+// Update restored info to UI
+void addDir(QObject *const rootObject, const QString &dir) {
+  QMetaObject::invokeMethod(rootObject, "appendDir", Q_ARG(QVariant, dir));
+  return;
+}
+
 int main(int argc, char *argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
@@ -29,11 +47,8 @@ int main(int argc, char *argv[]) {
 
   pydriveHandle.updateStatusText(getTime() + " - " + QString("Hello, Dear!"));
 
-  auto keys = pydriveHandle.get_keys();
-  for (auto &i : keys) {
-    pydriveHandle.updateKeys(QString::fromStdString(i.first),
-                             QString::fromStdString(i.second));
-  }
+  auto root_object = engine.rootObjects().first();
+  addKeys(root_object, pydriveHandle);
 
   auto config_path = boost::filesystem::current_path();
   config_path += boost::filesystem::path("/handle.json");
@@ -45,8 +60,8 @@ int main(int argc, char *argv[]) {
     auto root = readFromJson(config_path);
 
     for (auto &i : root.get_child("pydrive")) {
-      pydriveHandle.updateDir(
-          QString::fromStdString(i.second.get<std::string>("sourceDir")));
+      auto dir = QString::fromStdString(i.second.get<std::string>("sourceDir"));
+      addDir(root_object, dir);
     }
 
     pydriveHandle.updateStatusText(

@@ -7,11 +7,13 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_PREFIX_PATH "/Users/hn/Qt5.10.1//5.10.1/clang_64")
-
 find_package(Qt5 COMPONENTS Core Quick REQUIRED)
 
 find_package(Boost COMPONENTS filesystem date_time system REQUIRED)
+
+if(WIN32 OR APPLE)
+    add_definitions(-DFD_SETSIZE=1024)
+endif()
 
 add_executable(${PROJECT_NAME} "main.cpp" "qml.qrc" "handle.cpp" "handle.hpp")
 
